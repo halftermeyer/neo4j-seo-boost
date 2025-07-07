@@ -13,7 +13,6 @@ It focuses on creating semantically relevant links between pages while strategic
 2. Identify potential linking strategies based on similarity.
 3. Calculate PageRank to determine importance flow.
 4. Write back scores and create new optimized links.
-5. Visualize and analyze the new graph structure.
 
 ---
 
@@ -21,7 +20,7 @@ It focuses on creating semantically relevant links between pages while strategic
 
 We begin by importing pages into the graph. Each page is labeled according to its type (Homepage, Category, Subcategory, Book) and enriched with metadata such as title, URL, and keywords.
 
-### ingestion
+### Ingestion
 ```cypher
 // Create Nodes with :Page and Specific Page Type Labels
 CREATE (p1:Page:Homepage {node_id: 1, title: 'Bookstore Home', url: '/', keywords: 'bookstore, books, reading', crawl_depth: 0})
@@ -96,7 +95,7 @@ We identify and link pages with similar keywords. This simulates realistic inter
 ```cypher
 MATCH (n:Page)
 OPTIONAL MATCH (n)-[:LINKS_TO]->(m:Page)
-WITH gds.graph.project('maillage', n, m, {}) AS g
+WITH gds.graph.project('seo_mesh_graph', n, m, {}) AS g
 RETURN g.graphName;
 ```
 
@@ -106,7 +105,7 @@ RETURN g.graphName;
 
 Using the homepage as the entry point, we calculate the importance of each page through the graph’s structure.
 
-### compute pagerank
+### Compute pagerank
 ```cypher
 MATCH (home_page:Homepage)
 WITH COLLECT (home_page) AS home_pages
@@ -117,7 +116,7 @@ WITH home_pages, cats, COLLECT (b) AS blogs
 WITH [p IN home_pages | [p,1.0]]
       + [c IN cats | [c, 0.5]]
       + [b IN blogs | [b, 0.3]] AS source_nodes
-CALL gds.pageRank.stream('maillage', {
+CALL gds.pageRank.stream('seo_mesh_graph', {
   maxIterations: 20,
   dampingFactor: 0.85,
   sourceNodes: source_nodes
@@ -133,7 +132,7 @@ ORDER BY score DESC, name ASC
 
 We persist the PageRank scores as a property on each node to analyze and use in the next steps.
 
-### write pagerank
+### Write pagerank
 ```cypher
 MATCH (home_page:Homepage)
 WITH COLLECT (home_page) AS home_pages
@@ -144,7 +143,7 @@ WITH home_pages, cats, COLLECT (b) AS blogs
 WITH [p IN home_pages | [p,1.0]]
       + [c IN cats | [c, 0.5]]
       + [b IN blogs | [b, 0.3]] AS source_nodes
-CALL gds.pageRank.write('maillage', {
+CALL gds.pageRank.write('seo_mesh_graph', {
   maxIterations: 20,
   dampingFactor: 0.85,
   sourceNodes: source_nodes,
@@ -159,7 +158,7 @@ RETURN nodePropertiesWritten, ranIterations
 
 We artificially increase the PageRank score of high-priority product pages (e.g., those to promote in SEO strategy).
 
-### extract keywords as node
+### Extract keywords as node
 ```cypher
 MATCH (p:Page)
 UNWIND [kw IN apoc.text.split(p.keywords, ',') | trim(kw)] AS word
@@ -213,7 +212,7 @@ MERGE (sim)-[:LINKS_TO {boost:true}]->(b)
 
 ### Drop graph
 ```cypher
-CALL gds.graph.drop('maillage')
+CALL gds.graph.drop('seo_mesh_graph')
 // Then Project again and Write pagerank again
 ```
 
@@ -221,7 +220,7 @@ CALL gds.graph.drop('maillage')
 ```cypher
 MATCH (n:Page)
 OPTIONAL MATCH (n)-[:LINKS_TO]->(m:Page)
-WITH gds.graph.project('maillage', n, m, {}) AS g
+WITH gds.graph.project('seo_mesh_graph', n, m, {}) AS g
 RETURN g.graphName;
 ```
 
@@ -236,7 +235,7 @@ WITH home_pages, cats, COLLECT (b) AS blogs
 WITH [p IN home_pages | [p,1.0]]
       + [c IN cats | [c, 0.5]]
       + [b IN blogs | [b, 0.3]] AS source_nodes
-CALL gds.pageRank.write('maillage', {
+CALL gds.pageRank.write('seo_mesh_graph', {
   maxIterations: 20,
   dampingFactor: 0.85,
   sourceNodes: source_nodes,
